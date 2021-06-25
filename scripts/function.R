@@ -121,10 +121,7 @@ email_body_func <- function(.data){
 }
 
 
-
-
-
-
+# plotting function 
 mavg_plot_func <- function(.data){
   require(scales)
   .data %>% 
@@ -145,29 +142,10 @@ mavg_plot_func <- function(.data){
     scale_x_date(date_labels = "%b-%Y", date_breaks = "1 month") +
     theme_classic() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-  
-  # p2 <- .data %>% 
-  #   ggplot() +
-  #   geom_bar(
-  #     aes(x = date, y = deaths_new),
-  #     stat = "identity",
-  #     width = 1.0,
-  #     color = "grey"
-  #   ) +
-  #   geom_line(aes(x = date, y = deaths_week_mavg),
-  #             color = "dark green",
-  #             size = 2) +
-  #   ggtitle("7-day Moving Average of \nNew Deaths")+
-  #   xlab("Date") +
-  #   ylab("New Deaths") +
-  #   scale_x_date(date_labels = "%b-%Y", date_breaks = "1 month") +
-  #   theme_classic() +
-  #   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-  
-  # grid.arrange(p1, p2, nrow = 1)
+
 }
 
-
+# test function combining email body and plotting function
 body_func <- function(test){
   # print email body for specified state
   print(state_set_ebody[[{test}]])  
