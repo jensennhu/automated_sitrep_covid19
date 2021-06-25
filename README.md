@@ -1,7 +1,7 @@
 ## Project Name: COVID-19 Automated Email Report
 
 #### Description :  
-The aim of this project is produce daily/weekly situational reports on COVID-19 to monitor and visualize trends. 
+Reduce anxiety, stress, and misinformation during the COVID-19 pandemic by providing consistent situational reporting in an easily digestible and accessible format. Take in feedback from end-users/consumers, identify areas of improvement. 
 
 #### Contents :
  - "scripts" folder contains all necessary r code
