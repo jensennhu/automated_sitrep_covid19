@@ -1,0 +1,202 @@
+---
+title: "Interactive COVID-19 Report"
+output: html_document
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# load libraries
+library(tidyverse) # data manipulation and visualization
+library(dplyr) # data manipulation
+library(lubridate) # dates
+library(data.table) # formatting 
+library(knitr) # kniting 
+library(ggplot2) # visualizations
+library(matrixStats) # stats
+library(plotly) # visualizations
+library(purrr) # functional prog
+library(expss) # format labeling 
+library(zoo) # working w/time series data
+library(blastula) #compose and send emails 
+library(ggpubr) # setting multiple plots on one page
+library(knitr) # knitting tables etc 
+library(formattable) # awesome tables
+library(viridis) # color palette
+library(ggthemes) # themes for visuals
+library(ggrepel)
+library(rmarkdown)
+library(usmap)
+
+# source functions, formats, data
+source("format.R")
+load("loaded.Rdata")
+#source("load_data.R")
+source("function.R")
+
+ 
+# Get a nicely formatted date/time string
+date_time <- add_readable_time()
+
+
+```
+
+
+Good Morning:
+
+This is your daily COVID-19 report, sent on `r date_time`. Shown below is a current **draft** in continual development and error checking. Please feel free to reach out with suggestions or issues!
+
+---
+
+## {.tabset .tabset-pills}
+
+### USA Overall
+
+> `r usa_body`
+
+#### 7-day moving average of new cases and deaths in the US (`r first_day` to `r most_recent`)
+```{r fig1, fig.height = 5, fig.width = 10, fig.align = "center", echo=FALSE, warning=FALSE, message=FALSE}
+# usa_cases <-
+#   add_ggplot(plot_object = mavg_plot_func(daily_new))
+# usa_cases
+
+mavg_plot_func(daily_new)
+
+```
+
+### State-level Consecutive Day Trends {.tabset .tabset-pills}
+
+> Of the 51 US states monitored, **`r state_metrics_cat_consec %>% filter(trend == "rising", days >= 7) %>% nrow()` (`r round(state_metrics_cat_consec %>% filter(trend == "rising", days >= 7) %>% nrow()/51 * 100, 2)`%) ** show consecutive increase in their 7-day moving average of new COVID-19 cases for at least 7 days. **`r state_metrics_cat_consec %>% filter(trend == "decreasing", days >= 7) %>% nrow()` (`r round(state_metrics_cat_consec %>% filter(trend == "decreasing", days >= 7) %>% nrow()/51 * 100, 2)`%)** show consecutive decrease for at least 7 days.
+ 
+#### **`r state_metrics_cat_consec %>% filter(trend == "rising", days >= 7) %>% nrow()`** State(s) with Consecutive Increase
+<center>
+```{r echo=FALSE, warning=FALSE, results='asis'}
+# top ten states with 14 days continuous case increase based on cases/capita 100,000
+# table function
+
+table_consec_fun("rising")
+```
+</center>
+
+
+####  **`r state_metrics_cat_consec %>% filter(trend == "decreasing", days >= 7) %>% nrow()`** State(s) with Consecutive Decrease
+
+<center>
+```{r echo=FALSE, warning=FALSE, results='asis'}
+# top ten states with 14 days continuous case increase based on cases/capita 100,000
+
+table_consec_fun("decreasing")
+
+```
+
+
+
+
+
+
+
+
+### Hospital Status
+ 
+
+> The following illustrates the current situation in hospitals in the USA. On average, the stress on intensive care units (ICUs) across the country is *`r icu_phrase`* and the usage of inpatient centers by covid-19 patients is *`r inpatient_phrase`*.
+
+
+
+<center>
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+icu_stress %>% 
+  mutate(label = if_else(collection_date == max(collection_date), as.character(paste0(round(avg, 2), "%")), NA_character_)) %>%
+  ggplot(aes(x = collection_date, 
+            y = avg)) +
+  geom_line(
+            color = "dark green",
+            size = 2) + 
+  scale_colour_discrete(guide = 'none')  + 
+  geom_label_repel(aes(label = label),
+                  nudge_x = 5,
+                  na.rm = TRUE) +
+    ggtitle(paste0("%Est. Staffed Adult ICU \nBeds Occupied in USA \n(", min(icu$collection_date), " to ", max(icu$collection_date),")")) +
+  xlab("") +
+  ylab("% Staffed Adult ICU Beds Occupied") +
+  theme_economist()
+
+```
+</center>
+
+
+### Region by Region {.tabset .tabset-pills}
+
+#### west
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(west)
+```
+</center>
+
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+
+table_fun(west)
+
+```
+</center>
+
+#### south
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(south)
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+
+table_fun(south)
+```
+</center>
+
+#### midwest
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(midwest)
+
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+
+table_fun(midwest)
+
+```
+</center>
+
+
+#### northeast
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(northeast)
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+
+table_fun(northeast)
+
+```
+</center>
+
+
+### Other resources
+Other resources to check out:
+
+*  [See How All 50 States Are Reopening (and Closing Again)](https://www.nytimes.com/interactive/2020/us/states-reopen-map-coronavirus.html)
+*  [NYtimes Visualizations for Case Tracking in U.S.](https://www.nytimes.com/interactive/2020/us/coronavirus-us-cases.html)
+*  [Coronavirus Drug and Treatment Tracker](https://www.nytimes.com/interactive/2020/science/coronavirus-drugs-treatments.html)
+*  [Coronavirus Vaccine Tracker](https://www.nytimes.com/interactive/2020/science/coronavirus-vaccine-tracker.html)
+
+
+---

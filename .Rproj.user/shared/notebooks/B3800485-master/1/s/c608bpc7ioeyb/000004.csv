@@ -1,0 +1,8 @@
+"0","state_metrics_cat_consec %>% "
+"0","  group_by(covid_risk_level) %>% "
+"0","  tally() %>% "
+"0","  filter(covid_risk_level != ""NA"") %>% "
+"0","  mutate(percent = paste0(round(n/sum(n) * 100),""%"")) %>% "
+"0","  rename(""Status"" = covid_risk_level,"
+"0","         ""# States"" = n) %>% "
+"0","  formattable(align = c(""l"", ""c"", ""c""))"

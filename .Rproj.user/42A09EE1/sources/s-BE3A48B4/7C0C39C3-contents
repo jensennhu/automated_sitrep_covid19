@@ -1,0 +1,107 @@
+# load libraries
+library(tidyverse) # data manipulation and visualization
+library(dplyr) # data manipulation
+library(blastula) #compose and send emails 
+library(mailR)
+
+
+Sys.setenv(RSTUDIO_PANDOC="C:/Program Files/RStudio/bin/pandoc")
+
+# load data
+source("load_data.R")
+source("format.R")
+source("function.R")
+
+# render Rmd into interactive report on Github
+rmarkdown::render("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/master.Rmd", output_file = "./docs/index.html")
+
+# shiny
+#rsconnect::setAccountInfo(name = "jensenhu", token = "9650B87FCE6E5BB0F7529C4ACCF7308B", secret = "4gJjRukUvhCfv979C2zJMdZXnp0vY6j1rwkSNQf0")
+#rsconnect::deployApp(appDir = paste0(getwd(),"/master_shiny"), appFiles = c("app.R", "function.R", "loaded.Rdata"), appName = "master_shiny", launch.browser = F, forceUpdate = T)
+
+
+# render Rmd into email-able html format
+master_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/family.Rmd")
+friends_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends.Rmd")
+# friends_jc_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends_jc.Rmd")
+# friends_bl_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends_bl.Rmd")
+# friends_eh_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends_eh.Rmd")
+# friends_sw_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends_sw.Rmd")
+# friends_ep_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends_ep.Rmd")
+# friends_bk_body <- render_email("C:/Users/jense/Desktop/Projects/covid_email_report_production/test_automation/friends_bk.Rmd")
+
+# Get a nicely formatted date/time string
+date_time <- add_readable_time()
+
+#create_smtp_creds_key(
+#  id = "gmail",
+#  user = "hu.jensenhu@gmail.com",
+#  provider = "gmail",
+#  overwrite = T
+#)
+
+master_body %>% 
+  smtp_send(
+    from = "hu.jensenhu@gmail.com",
+    to = "jensennhu@gmail.com",
+    #bcc = c("eddiehhu@gmail.com",  "tiffwho@gmail.com", "adri.hu@gmail.com", "helennghu@gmail.com", "jjchang7@gmail.com", "brianjkim05@gmail.com", "roblam@gmail.com", "kristinawritess@gmail.com"),
+    subject = paste0("COVID-19 Report: ", date_time),
+    credentials = creds_key(id = "gmail")
+  )
+
+friends_body %>% 
+  smtp_send(
+    from = "hu.jensenhu@gmail.com",
+    to = c("jensennhu@gmail.com"),
+    #bcc = c("brian.j.hung@gmail.com", "belindacheng918@gmail.com", "bryanthua@gmail.com", "christine.cerrada@gmail.com", "themeanyhead@gmail.com", "enochkim92@gmail.com", "minhtam.nguyen@mattel.com", "casey.m.ching@hawaii.gov"), 
+    subject = paste0("COVID-19 Report: ", date_time),
+    credentials = creds_key(id = "gmail")
+  )
+# 
+# friends_jc_body %>% 
+#   smtp_send(
+#     from = "hu.jensenhu@gmail.com",
+#     to = c("jensennhu@gmail.com", "jtnc02@gmail.com"), 
+#     subject = paste0("COVID-19 Report: ", date_time),
+#     credentials = creds_key(id = "gmail")
+#   )
+# 
+# friends_bl_body %>% 
+#   smtp_send(
+#     from = "hu.jensenhu@gmail.com",
+#     to = c("jensennhu@gmail.com", "biancalouie@gmail.com"), 
+#     subject = paste0("COVID-19 Report: ", date_time),
+#     credentials = creds_key(id = "gmail")
+#   )
+# 
+# friends_eh_body %>% 
+#   smtp_send(
+#     from = "hu.jensenhu@gmail.com",
+#     to = c("jensennhu@gmail.com", "emilyannhannah@gmail.com"), 
+#     subject = paste0("COVID-19 Report: ", date_time),
+#     credentials = creds_key(id = "gmail")
+#   )
+# 
+# friends_sw_body %>% 
+#   smtp_send(
+#     from = "hu.jensenhu@gmail.com",
+#     to =  c("jensennhu@gmail.com", "swang165@gmail.com"), 
+#     subject = paste0("COVID-19 Report: ", date_time),
+#     credentials = creds_key(id = "gmail")
+#   )
+# 
+# friends_ep_body %>% 
+#   smtp_send(
+#     from = "hu.jensenhu@gmail.com",
+#     to = c("jensennhu@gmail.com", "Ellapestine@gmail.com"), 
+#     subject = paste0("COVID-19 Report: ", date_time),
+#     credentials = creds_key(id = "gmail")
+#   )
+# 
+# friends_bk_body %>% 
+#   smtp_send(
+#     from = "hu.jensenhu@gmail.com",
+#     to = c("jensennhu@gmail.com", "hello@bkelz.com"), 
+#     subject = paste0("COVID-19 Report: ", date_time),
+#     credentials = creds_key(id = "gmail")
+#   )

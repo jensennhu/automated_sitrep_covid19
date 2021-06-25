@@ -1,0 +1,195 @@
+---
+title: 
+  "COVID-19 Report"
+output: 
+  blastula_email
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# load libraries
+library(tidyverse) # data manipulation and visualization
+library(dplyr) # data manipulation
+library(lubridate) # dates
+library(data.table) # formatting 
+library(knitr) # kniting 
+library(ggplot2) # visualizations
+library(matrixStats) # stats
+library(plotly) # visualizations
+library(purrr) # functional prog
+library(expss) # format labeling 
+library(zoo) # working w/time series data
+library(blastula) #compose and send emails 
+library(ggpubr) # setting multiple plots on one page
+library(knitr) # knitting tables etc 
+library(formattable) # awesome tables
+library(viridis) # color palette
+library(ggthemes) # themes for visuals
+library(ggrepel)
+library(rmarkdown)
+library(usmap)
+
+# source functions, formats, data
+source("format.R")
+load("loaded.Rdata")
+#source("load_data.R")
+source("function.R")
+
+ 
+# Get a nicely formatted date/time string
+date_time <- add_readable_time()
+
+```
+
+
+Good Morning:
+
+This is your daily COVID-19 report, sent on `r date_time`. Shown below is a current **draft** in continual development and error checking. Please feel free to reach out with suggestions or issues! Click here to review the [interactive report](https://jensennhu.github.io/covid_sitrep_auto_prod/). If you're curious about the situation in other places in the USA (state/county level) or international locations, please click [**here**](http://ec2-3-17-139-199.us-east-2.compute.amazonaws.com:3838/shiny_covid19_aws/).
+
+---
+
+
+### USA Overall
+
+> `r usa_body`    
+
+#### 7-day moving average of new cases in the US (`r first_day` to `r most_recent`)
+```{r fig.align = "center", echo=FALSE, warning=FALSE, message=FALSE}
+
+add_ggplot(plot_object = mavg_plot_func(daily_new))
+
+```
+
+### State Consecutive Day Trends 
+
+> Of the 51 US states monitored, **`r state_metrics_cat_consec %>% filter(trend == "rising", days >= 7) %>% nrow()` (`r round(state_metrics_cat_consec %>% filter(trend == "rising", days >= 7) %>% nrow()/51 * 100, 2)`%) ** show consecutive increase in their 7-day moving average of new COVID-19 cases for at least 7 days. **`r state_metrics_cat_consec %>% filter(trend == "decreasing", days >= 7) %>% nrow()` (`r round(state_metrics_cat_consec %>% filter(trend == "decreasing", days >= 7) %>% nrow()/51 * 100, 2)`%)** show consecutive decrease for at least 7 days.
+ 
+#### **`r state_metrics_cat_consec %>% filter(trend == "rising", days >= 7) %>% nrow()`** State(s) with Consecutive Increase for at least 7 days
+<center>
+```{r echo=FALSE, warning=FALSE, results='asis'}
+table_consec_fun("rising")
+```
+</center>
+
+
+####  **`r state_metrics_cat_consec %>% filter(trend == "decreasing", days >= 7) %>% nrow()`** State(s) with Consecutive Decrease for at least 7 days
+
+<center>
+```{r echo=FALSE, warning=FALSE, results='asis'}
+table_consec_fun("decreasing")
+```
+
+
+### Hospital Status (Beta)
+ 
+
+> On average, the current stress on ICUs across the country is *`r icu_phrase`*. Stress definitions can be found below:  
+
+*  **low**: less than 10% of ICU Usage   
+*  **moderate**: 10-29% of ICU Usage  
+*  **high**: 30-59% of ICU Usage
+*  **extreme**: greater than 60% of ICU Usage
+
+
+<center>
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+icu_stress %>% 
+  mutate(label = if_else(collection_date == max(collection_date), as.character(paste0(round(avg, 2), "%")), NA_character_)) %>%
+  ggplot(aes(x = collection_date, 
+            y = avg)) +
+  geom_line(
+            color = "dark green",
+            size = 2) + 
+  scale_colour_discrete(guide = 'none')  + 
+  geom_label_repel(aes(label = label),
+                  nudge_x = 5,
+                  na.rm = TRUE) +
+    ggtitle(paste0("%Est. Staffed Adult ICU \nBeds Occupied in USA \n(", min(icu$collection_date), " to ", max(icu$collection_date),")")) +
+  xlab("") +
+  ylab("% Staffed Adult ICU Beds Occupied") +
+  theme_economist()
+
+```
+</center>
+
+
+### Region by Region 
+
+How to read the maps below:    
+
+*  **Cases Higher**: greater than or equal to 15 new cases per 100,000 people.   
+*  **Cases Lower**: less than 15 new cases per 100,000 people.   
+*  **Rising**: increase in the 7-day moving average, week over week.   
+*  **Decreasing**: decrease in the 7-day moving average, week over week.  
+*  **Staying**: no change in the 7-day moving average,  week over weeks
+
+#### **Western US**
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_trend_func(west)
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(west)
+```
+</center>
+
+#### **Southern US**
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_trend_func(south)
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(south)
+```
+</center>
+
+#### **Midwestern US**
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_trend_func(midwest)
+
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(midwest)
+
+```
+</center>
+
+#### **Northeastern US**
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_trend_func(northeast)
+```
+</center>
+
+<center>
+```{r echo=FALSE, warning=FALSE}
+map_func(northeast)
+```
+</center>
+
+  
+
+### Other resources
+Other resources to check out:
+
+*  [See How All 50 States Are Reopening (and Closing Again)](https://www.nytimes.com/interactive/2020/us/states-reopen-map-coronavirus.html)
+*  [NYtimes Visualizations for Case Tracking in U.S.](https://www.nytimes.com/interactive/2020/us/coronavirus-us-cases.html)
+*  [Coronavirus Drug and Treatment Tracker](https://www.nytimes.com/interactive/2020/science/coronavirus-drugs-treatments.html)
+*  [Coronavirus Vaccine Tracker](https://www.nytimes.com/interactive/2020/science/coronavirus-vaccine-tracker.html)
+*  [US Projections](https://covid19.healthdata.org/united-states-of-america?view=total-deaths&tab=trend)
+
+
+---

@@ -1,0 +1,132 @@
+---
+title: "Interactive COVID-19 Report"
+output: blastula::blastula_email
+---
+
+```{r, child=c('master_email.Rmd'), echo=FALSE, message=FALSE, warning=FALSE}
+
+```
+---
+
+## A closer look at your area(s) of interest:
+
+### Los Angeles County, CA
+
+> `r email_body_func(la)`
+
+
+#### 7-day moving average of new cases in Los Angeles County (`r min(la$date)` to `r max(la$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+la <- mavg_plot_func(la)
+
+la <-
+  add_ggplot(plot_object = la)
+la
+```
+
+---
+
+### New York City, NY
+
+> `r email_body_func(nyc)`
+
+
+#### 7-day moving average of new cases in New York City (`r min(nyc$date)` to `r max(nyc$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+nyc <- mavg_plot_func(nyc)
+
+nyc <-
+  add_ggplot(plot_object = nyc)
+nyc
+```
+
+---
+
+### Chicago (Cook County), IL
+
+> `r email_body_func(ck)`
+
+
+#### 7-day moving average of new cases in Chicago (Cook County) (`r min(ck$date)` to `r max(ck$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+ck <- mavg_plot_func(ck)
+
+ck <-
+  add_ggplot(plot_object = ck)
+ck
+```
+
+
+---
+
+### Boston (Suffolk County), MA
+
+> `r email_body_func(sf)`
+
+
+#### 7-day moving average of new cases in Boston (Suffolk County) (`r min(sf$date)` to `r max(sf$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+sf <- mavg_plot_func(sf)
+
+sf <-
+  add_ggplot(plot_object = sf)
+sf
+```
+
+---
+
+### Kansas City (Wyandotte County), Kansas
+
+> `r email_body_func(kc)`
+
+
+#### 7-day moving average of new cases in Kansas City (Wyandotte County), Kansas (`r min(kc$date)` to `r max(kc$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+kc <- mavg_plot_func(kc)
+
+kc <-
+  add_ggplot(plot_object = kc)
+kc
+```
+
+
+---
+
+### Hong Kong
+
+> `r email_body_func(hk)`
+
+
+#### 7-day moving average of new cases in Hong Kong (`r min(hk$date)` to `r max(hk$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+hk <- mavg_plot_func(hk)
+
+hk <-
+  add_ggplot(plot_object = hk)
+hk
+```
+
+
+---
+
+### Ontario, Canada
+
+> `r email_body_func(tc)`
+
+
+#### 7-day moving average of new cases in Ontario, Canada (`r min(tc$date)` to `r max(tc$date)`)
+
+```{r echo=FALSE, warning=FALSE}
+tc <- mavg_plot_func(tc)
+
+tc <-
+  add_ggplot(plot_object = tc)
+tc
+```
+

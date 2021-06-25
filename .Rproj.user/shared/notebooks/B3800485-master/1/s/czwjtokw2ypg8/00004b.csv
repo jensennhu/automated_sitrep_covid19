@@ -1,0 +1,4 @@
+"0","# top ten states with 14 days continuous case increase based on cases/capita 100,000"
+"0","# table function"
+"0",""
+"0","table_consec_fun(""decreasing"")"
