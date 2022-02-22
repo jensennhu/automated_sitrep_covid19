@@ -117,7 +117,7 @@ table_consec_fun <- function(var){
   
   state_metrics_cat_consec %>% 
     filter(trend == {var},
-           days >= 7) %>% 
+           days >= 1) %>% 
     select(state, cases_per_capita, days) %>% 
     arrange(desc(cases_per_capita)) %>% 
     rename("State" = state,

@@ -10,7 +10,7 @@ library(ggplot2) # visualizations
 library(matrixStats) # stats
 library(plotly) # visualizations
 library(purrr) # functional prog
-library(expss) # format labeling 
+library(expss) # format labeling
 library(zoo) # working w/time series data
 library(blastula) #compose and send emails 
 library(ggpubr) # setting multiple plots on one page
@@ -20,21 +20,22 @@ library(janitor) # additional agg func
 library(ggplot2) # plotting
 library(RColorBrewer) # color scheme
 library(usmap) # geo
-# library(rsconnect) 
-# library(TTR)
-library(here) # file path management
-library(rio) # input output
+library(rsconnect)
+library(TTR)
+library(hrbrthemes)
 
 # --------- Load Data and Functions ----------####
 
+# get functions
+source("function.R")
+
 # load github data from ny times
-covid_us <- import("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv")
-covid_state <- import("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
-covid_county <- import("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
+covid_us <- fread("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv")
+covid_state <- fread("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
+covid_county <- fread("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
 
 # load census data from 2010 
-census <- import(here("raw_data", "nst-est2019-alldata.csv"))
-population <- import(here("raw_data", "2019_census_data.csv"), header = TRUE)
+census <- fread("../raw_data/NST-EST2021-alldata.csv")
 
 # load github data from johns hopkins
 jhu_cases <- fread("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
@@ -46,30 +47,22 @@ international <- jhu_cases %>%
               select(-c(Lat, Long)),
             by = c("Province/State" = "Province/State", "Country/Region" = "Country/Region", "date" = "date"))
 
-
 # vectors for international areas
 province <- unique(jhu_cases$`Province/State`)
 country <- unique(jhu_cases$`Country/Region`)
 country <- country[!country %in% c("Australia", "Canada", "China")]
 
-# statepop
-data("statepop")
+# vaccine data 
+vaccine <- fread("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv")
 
-# vaccine data
-vaccine <- import("https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/us_data/time_series/vaccine_data_us_timeline.csv")
 
-# load testing and hospitalization data from covidtrackingproject
-ctp_us <- import("https://covidtracking.com/data/download/national-history.csv")
-
-# get functions
-source("function.R")
 
 # format dates
 covid_us$date <- ymd(covid_us$date)
 covid_state$date <- ymd(covid_state$date)
 covid_county$date <- ymd(covid_county$date)
-ctp_us$date <- ymd(ctp_us$date)
 international$date <- mdy(international$date)
+
 # dates captured in dataset
 days_monitored <- n_distinct(covid_us$date)
 first_day <- min(covid_us$date)
@@ -77,8 +70,7 @@ most_recent <- max(covid_us$date)
 
 
 # --------- Flag for old data ----------####
-
-#Flag error and send email notification if data is not updated
+# Flag error and send email notification if data is not updated
 if(most_recent + 1 < Sys.Date())
   compose_email(
     body = md(c(
@@ -86,8 +78,8 @@ if(most_recent + 1 < Sys.Date())
     ))
   ) %>%
   smtp_send(
-    from = "hu.jensenhu@gmail.com",
-    to = "jensennhu@gmail.com",
+    from = "my_email_address",
+    to = "my_email_address",
     subject = paste0("NYtimes data not yet loaded: ", add_readable_time()),
     credentials = creds_key(id = "gmail")
   )
@@ -101,23 +93,20 @@ covid_county$county <- paste(covid_county$county, "County,", covid_county$state)
 us_counties <- unique(covid_county$county)
 
 # prepare census data
-census <- census %>% select(NAME, REGION, DIVISION, CENSUS2010POP)
 census_regions <- census %>% 
-  rename(us_area = NAME,
-         pop_area = CENSUS2010POP) %>% 
-  select(-DIVISION) %>% 
+  rename(us_area = NAME) %>% 
+  select(REGION, us_area) %>% 
   head(5)
-pop_2019 <- population %>% select(V1, "2019") %>% rename(state = V1)
-pop_2019$`2019` <- as.numeric(gsub(",", "", pop_2019$`2019`))
+
+pop_2021 <- census %>% 
+  select(REGION, NAME, POPESTIMATE2021) %>% 
+  left_join(census_regions, by = c("REGION" = "REGION"))
+
 
 # --------- Metrics Calculation and Data Categorization ----------####
 
 # calculate overall us metrics
-daily_new <- state_fun(covid_us %>% 
-  left_join(ctp_us %>% 
-  select(date, hospitalizedIncrease, totalTestResultsIncrease), 
-  by = c("date" = "date")))
-
+daily_new <- state_fun(covid_us)
 daily_new$cases_week_mavg <- as.numeric(format(daily_new$cases_week_mavg, scientific = F))
 
 # overall USA metric intro
@@ -126,7 +115,33 @@ usa_body <- email_body_func(daily_new)
 # df of all USA states/territories - metrics/timeseries
 state_metrics <-
   us_states %>% 
-  map_df(state_fun)
+  map_df(state_fun) 
+
+# summarized version of state metrics (most recent date)
+summarized_state_metrics <- state_metrics %>%
+  split(.$state) %>% 
+  map_df(~quick_stats_func(.)) %>% 
+  left_join(pop_2021, by = c("state" = "NAME")) %>% 
+  left_join(
+# summarized version of state metrics (previous day and week)
+ state_metrics %>% 
+  filter(date == most_recent - 1) %>% 
+  select(state, cases_week_pct_mavg) %>% 
+  rename(prev_pct_mavg = cases_week_pct_mavg) %>% 
+  left_join(state_metrics %>% 
+              filter(date == most_recent - 7) %>% 
+              select(state, cases_week_pct_mavg) %>% 
+              rename(prev_week_pct_mavg = cases_week_pct_mavg), 
+            by = c('state' = 'state')) %>%
+  mutate_at(
+    c("prev_pct_mavg","prev_week_pct_mavg"),
+    funs(case_when(
+      . > 0 ~ "rising",
+      . == 0 ~ "staying",
+      . < 0 ~ "decreasing"
+    ))), by = c('state' = 'state'))
+
+
 
 # list of all USA states/territories email bodies
 state_set_ebody <-
@@ -134,15 +149,17 @@ state_set_ebody <-
   split(.$state) %>% 
   map(~ email_body_func(.))
 
+
+# vaccine
+vaccine <- vaccine %>% 
+  select(date, location, people_fully_vaccinated_per_hundred, total_boosters_per_hundred) %>% 
+  filter(date == most_recent) 
+vaccine$location[vaccine$location == "New York State"] <- "New York"
+
 # categorize All states/territories by thresholds and trends, join census & hospital data
-state_metrics_cat <- state_metrics %>%
-  filter(date == most_recent) %>% 
-  left_join(census, by = c("state" = "NAME")) %>% 
-  left_join(statepop, by = c("state" = "full")) %>% 
-  left_join(pop_2019, by = c("state" = "state" )) %>% 
-  rename(census_2019 = `2019`) %>% 
-  mutate(cases_per_capita = cases_week_mavg/census_2019 * 100000) %>% 
-  left_join(census_regions, by = c("REGION" = "REGION")) %>% 
+summarized_state_metrics <- summarized_state_metrics %>% 
+  left_join(vaccine, by = c("state" = "location")) %>% 
+  mutate(cases_per_capita = cases_week_mavg/POPESTIMATE2021 * 100000) %>% 
   mutate(
     # labeling trend of 7-day mavg ####
     trend = case_when(
@@ -157,71 +174,18 @@ state_metrics_cat <- state_metrics %>%
       cases_week_pct_mavg > 0 & cases_per_capita < 15 ~ "Cases lower and rising",
       cases_week_pct_mavg == 0 & cases_per_capita < 15 ~ "Cases lower and staying",
       cases_week_pct_mavg < 0 & cases_per_capita < 15 ~ "Cases lower and decreasing"
-    ),  
-    # categories for covid risk level
-    covid_risk_level = case_when(
-      cases_per_capita >= 25 ~ "Unchecked Community Spread",
-      cases_per_capita >= 10 & cases_per_capita < 25 ~ "Escalating Community Spread",
-      cases_per_capita >= 1 & cases_per_capita < 10 ~ "Community Spread",
-      cases_per_capita < 1 ~ "close to containment"
-    ),
-    # categories for ph intervention
-    ph_intvtn = case_when(
-      cases_per_capita >= 25 ~ "Stay-at-Home Orders Necessary",
-      cases_per_capita >= 10 & cases_per_capita < 25 ~ "Stay-at-Home Orders And/Or Rigorous Test and Trace Programs Advised",
-      cases_per_capita >= 1 & cases_per_capita < 10 ~ "Rigorous Test and Trace Advised",
-      cases_per_capita < 1 ~ "Monitor w/testing & tracing"
-    )
-  ) %>% 
-  select(date, state, abbr, fips.x, cases_week_mavg, cases_week_pct_mavg, categories, census_2019, cases_per_capita, us_area, pop_area, trend, covid_risk_level, ph_intvtn)#, collection_date, `Percentage of Staffed Adult ICU Beds Occupied Estimated`, icu_stress, `Percentage of Inpatient Beds Occupied by COVID-19 Patients Estimated`, inpatient_covid_stress) 
-
+    ))
 
 
 # get regions of USA
-west <- state_metrics_cat %>% filter(us_area == "West Region") %>% select(state) %>% pull()
-south <- state_metrics_cat %>% filter(us_area == "South Region") %>% select(state) %>% pull()
-northeast <- state_metrics_cat %>% filter(us_area == "Northeast Region") %>% select(state) %>% pull()
-midwest <- state_metrics_cat %>% filter(us_area == "Midwest Region") %>% select(state) %>% pull()
+west <- summarized_state_metrics %>% filter(us_area == "West Region") %>% select(state) %>% pull()
+south <- summarized_state_metrics %>% filter(us_area == "South Region") %>% select(state) %>% pull()
+northeast <- summarized_state_metrics %>% filter(us_area == "Northeast Region") %>% select(state) %>% pull()
+midwest <- summarized_state_metrics %>% filter(us_area == "Midwest Region") %>% select(state) %>% pull()
 
 
-#---------------- 14 day look-back ----------------####
-# 
-# look_back_fun <- function(area){
-#   len <- length(state_fun({area})$sign)
-#   fourteen <- state_fun({area})$sign[(len):(len-13)]
-#   pos <- length(which(fourteen == 1))
-#   neg <- length(which(fourteen == -1))
-#   neut <- length(which(fourteen == 0))
-#   
-#   if (pos > neg){
-#     print(paste0({area}, "'s 14-day look-back indicates majority increasing trends"))
-#   } else if (pos < neg){
-#     print(paste0({area}, "'s 14-day look-back indicates majority decreasing trends"))
-#   } else {
-#     print(paste0({area}, "'s 14-day look-back indicates a neutral status")) 
-#   }
-#   
-# }
-# 
-# len <- length(state_fun("California")$sign)
-# fourteen <- state_fun("California")$sign[(len-13):(len)]
-# magnitude <- state_fun("California")$cases_week_pct_mavg[(len-13):(len)]
-# names(magnitude) <- rep(paste0("Day ", 1: length(magnitude)))
-# 
-# pos <- length(which(fourteen == 1))
-# neg <- length(which(fourteen == -1))
-# neut <- length(which(fourteen == 0))
-# 
-# if (pos > neg){
-#   print(paste0("Increase"))
-# } else if (pos < neg){
-#   print(paste0("Decrease"))
-# } else {
-#   print(paste0("Neutral")) 
-# }
-
-
-states_incr_df <- state_metrics_cat %>% 
+# consecutive counts
+states_incr_df <- summarized_state_metrics %>% 
   filter(trend == "rising") %>% 
   pull(state) %>% 
   # get covid metrics 
@@ -229,7 +193,7 @@ states_incr_df <- state_metrics_cat %>%
   # determine # days consecutive increase
   map_dfr(consec_incr)
 
-states_dcr_df <- state_metrics_cat %>% 
+states_dcr_df <- summarized_state_metrics %>% 
   filter(trend == "decreasing") %>% 
   pull(state) %>% 
   # get covid metrics 
@@ -237,47 +201,19 @@ states_dcr_df <- state_metrics_cat %>%
   # determine # days consecutive decrease
   map_dfr(consec_dcr)
 
-
 # consecutive metrics + state metrics
 state_metrics_cat_consec <- states_incr_df %>% 
   bind_rows(states_dcr_df) %>% 
-  right_join(state_metrics_cat, by = c("state" = "state")) %>% 
-  # add vaccine data
-  filter(pop_area != "NA")
+  right_join(summarized_state_metrics, by = c("state" = "state")) %>% 
+  filter(us_area != "NA")
 
 state_metrics_cat_consec$cases_per_capita <- round(state_metrics_cat_consec$cases_per_capita, 0)
 
 
+# save output as Rdata for faster loading
 
-#---------------- BODY of EMAIL ----------------####
-# select states
-ca <- state_fun("California")
-ny <- state_fun("New York")
-il <- state_fun("Illinois")
-wa <- state_fun("Washington")
-ma <- state_fun("Massachusetts")
+test <- ls() %>% unique()
 
-# select cities
-nyc <- state_fun("New York City County, New York")
-la  <- state_fun("Los Angeles County, California")
-ck  <- state_fun("Cook County, Illinois")
-sf  <- state_fun("Suffolk County, Massachusetts") %>% filter(date > "2020-09-12")
-kc  <- state_fun("Wyandotte County, Kansas")
-
-# international locations
-hk <- state_fun("Hong Kong")
-sg <- state_fun("Shanghai")
-tc <- state_fun("Ontario")
-
-# save output as Rdata for faster loading 
-vector_set <- ls()
-export(vector_set, here("output", "loaded.Rdata"))
-# save as RDS for shiny 
-saveRDS(us_states, here("master_shiny", "us_states.Rdata"))
-saveRDS(covid_state, here("master_shiny", "covid_state.Rdata"))
-saveRDS(us_counties, here("master_shiny", "us_counties.Rdata"))
-saveRDS(covid_county, here("master_shiny", "covid_county.Rdata"))
-saveRDS(international, here("master_shiny", "international.Rdata"))
-saveRDS(country, here("master_shiny", "country.Rdata"))
-saveRDS(province, here("master_shiny", "province.Rdata"))
-
+save(
+  test,
+  file = "loaded.Rdata")

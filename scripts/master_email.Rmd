@@ -26,13 +26,12 @@ library(ggthemes) # themes for visuals
 library(ggrepel)
 library(rmarkdown)
 library(usmap)
-library(rio)
 
 # # source functions, formats, data
-source(here("scripts", "format.R"))
-load(here("output", "loaded.Rdata"))
-# #source("load_data.R")
-source(here("scripts", "function.R"))
+source("format.R")
+load("loaded.Rdata")
+#source("load_data.R")
+source("function.R")
 
  
 # Get a nicely formatted date/time string
@@ -41,9 +40,9 @@ date_time <- add_readable_time()
 ```
 
 
-Hello:
+Good Morning:
 
-This is your COVID-19 report, sent on `r date_time`. Shown below is a current **draft** in continual development and error checking. Please feel free to reach out with suggestions or issues! If you're curious about the situation in other places in the USA (state/county level) or international locations, please click [**here**](http://ec2-3-17-139-199.us-east-2.compute.amazonaws.com:3838/shiny_covid19_aws/).
+This is your daily COVID-19 report, sent on `r date_time`. Shown below is a current **draft** in continual development and error checking. Please feel free to reach out with suggestions or issues!
 
 ---
 
@@ -76,6 +75,15 @@ table_consec_fun("rising")
 <center>
 ```{r echo=FALSE, warning=FALSE, results='asis'}
 table_consec_fun("decreasing")
+```
+
+<center>        
+```{r}
+summarized_state_metrics %>% 
+  select(state, cases_week_mavg, POPESTIMATE2021, cases_per_capita, people_fully_vaccinated_per_hundred, days_since_infl, trend) %>% 
+  arrange(desc(cases_per_capita)) %>% 
+  filter(!is.na(cases_per_capita))
+  
 ```
 
 

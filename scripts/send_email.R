@@ -2,41 +2,31 @@
 library(tidyverse) # data manipulation and visualization
 library(dplyr) # data manipulation
 library(blastula) #compose and send emails 
-library(lubridate) # dates
-library(rio) # input ouput 
-library(here) # file path management
-
 
 Sys.setenv(RSTUDIO_PANDOC="C:/Program Files/RStudio/bin/pandoc")
 
-# render Rmd into email-able html format
-master_body <- render_email(here("scripts", "family.Rmd"))
+# load data
+source("load_data.R")
+source("format.R")
+source("function.R")
 
-# Get a nicely formatted date/time string
+# render Rmd into email-able html format
+master_body <- render_email(".../master_email.Rmd")
+
+# # Get a nicely formatted date/time string
 date_time <- add_readable_time()
 
-# Config Email Credentials - comment out after setting up.
 # create_smtp_creds_key(
 #  id = "gmail",
-#  user = "hu.jensenhu@gmail.com",
+#  user = "my_email_address",
 #  provider = "gmail",
 #  overwrite = T
 # )
 
-# Daily Report
-master_body %>%
+master_body %>% 
   smtp_send(
-    from = "hu.jensenhu@gmail.com",
-    to = "jensennhu@gmail.com",
+    from = "my_email_address",
+    to = "to_email_address",
     subject = paste0("COVID-19 Report: ", date_time),
     credentials = creds_key(id = "gmail")
-  )
-
-# Weekly Report - runs every Monday
-if (wday(ymd(Sys.Date())) == 2)
-  master_body %>% 
-  smtp_send(from = "hu.jensenhu@gmail.com",
-            to = "jensennhu@gmail.com",
-            subject = paste0("Weekly Rona' Digest: ", date_time),
-            credentials = creds_key(id = "gmail")
   )
